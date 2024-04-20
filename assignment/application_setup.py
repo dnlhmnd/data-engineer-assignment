@@ -1,5 +1,7 @@
 import os
 import csv
+import time
+import threading
 from flask import Flask, jsonify
 from datetime import datetime, timedelta
 
@@ -7,6 +9,10 @@ app = Flask(__name__)
 
 transaction_folder = 'assignment/Transactions'
 reference_data_folder = 'assignment/Reference Data'
+
+# Shared data structures
+reference_data = {}
+transaction_data = []
 
 def load_reference_data(reference_data_file):
     reference_data = {}
@@ -20,27 +26,43 @@ def load_reference_data(reference_data_file):
     return reference_data
 
 def load_transaction_data(transaction_folder):
-    transaction_data = []
-    for filename in os.listdir(transaction_folder):
-        if filename.endswith('.csv'):
-            file_path = os.path.join(transaction_folder, filename)
-            with open(file_path, 'r') as file:
-                reader = csv.DictReader(file)
-                for row in reader:
-                    transaction_data.append({
-                        'transactionId': row['transactionId'],
-                        'productId': row['productId'],
-                        'transactionAmount': row['transactionAmount'],
-                        'transactionDatetime': row['transactionDatetime']
-                    })
-    return transaction_data
+    global transaction_data
+    
+    processed_files = set()
+    
+    while True:
 
-# Load transaction and reference data into memory
+        files = os.listdir(transaction_folder)
+        
+        # Check for new files
+        new_files = [file for file in files if file not in processed_files]
+        
+        # Process new files
+        for filename in new_files:
+            if filename.endswith('.csv'):
+                file_path = os.path.join(transaction_folder, filename)
+                with open(file_path, 'r') as file:
+                    reader = csv.DictReader(file)
+                    for row in reader:
+                        transaction_data.append({
+                            'transactionId': row['transactionId'],
+                            'productId': row['productId'],
+                            'transactionAmount': row['transactionAmount'],
+                            'transactionDatetime': row['transactionDatetime']
+                        })
+
+                processed_files.add(filename)
+
+        time.sleep(3)  
+
+# Load reference data
 reference_data_file = os.path.join(reference_data_folder, 'ProductReference.csv')
 reference_data = load_reference_data(reference_data_file)
 
-transaction_data_folder = transaction_folder  
-transaction_data = load_transaction_data(transaction_data_folder)
+# Start the transaction data loader thread
+transaction_loader_thread = threading.Thread(target=load_transaction_data, args=(transaction_folder,))
+transaction_loader_thread.daemon = True
+transaction_loader_thread.start()
 
 # (a)
 @app.route('/assignment/transaction/<int:transaction_id>', methods=['GET'])
@@ -50,7 +72,7 @@ def get_transaction(transaction_id):
             product_info = reference_data.get(transaction['productId'], {})
             return jsonify({
                 'transactionId': transaction['transactionId'],
-                'productName': product_info.get('productName', ''),
+                'productName': product_info.get('productName', 'Unknown Product'),
                 'transactionAmount': float(transaction['transactionAmount']),
                 'transactionDatetime': transaction['transactionDatetime']
             })

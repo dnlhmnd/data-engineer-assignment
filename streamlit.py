@@ -126,4 +126,50 @@ df = pd.DataFrame(dummy_data)
 st.write("Dummy data (data-engineer-assignment/Transaction_test.csv) ")
 st.write(df)
 
-st.write("As you can see, the transaction information got updated after I copied the dummy data to the 'Transaction' folder")
+st.write("As you can see, the transaction information was updated after I copied the dummy data to the 'Transaction' folder. I was able to get transactionId (7) after the transaction information got updated which wasn't in the memory when the application started.")
+
+image_url = 'images/Recording1.gif'
+st.image(image_url, use_column_width=True)
+
+with st.expander("See code snippet"):
+    code = '''def load_transaction_data(transaction_folder):
+    global transaction_data
+    
+    processed_files = set()
+    
+    while True:
+
+        files = os.listdir(transaction_folder)
+        
+        # Check for new files
+        new_files = [file for file in files if file not in processed_files]
+        
+        # Process new files
+        for filename in new_files:
+            if filename.endswith('.csv'):
+                file_path = os.path.join(transaction_folder, filename)
+                with open(file_path, 'r') as file:
+                    reader = csv.DictReader(file)
+                    for row in reader:
+                        transaction_data.append({
+                            'transactionId': row['transactionId'],
+                            'productId': row['productId'],
+                            'transactionAmount': row['transactionAmount'],
+                            'transactionDatetime': row['transactionDatetime']
+                        })
+
+                processed_files.add(filename)
+
+        time.sleep(3)  
+
+reference_data_file = os.path.join(reference_data_folder, 'ProductReference.csv')
+reference_data = load_reference_data(reference_data_file)
+
+transaction_loader_thread = threading.Thread(target=load_transaction_data, args=(transaction_folder,))
+transaction_loader_thread.daemon = True
+transaction_loader_thread.start()'''
+    st.code(code, language='python')
+
+st.write("")
+st.write("In my current role as a Junior Data Scientist we usually use AWS SNS that's connected to a specific folder, google drive folder, AWS S3 bucket, etc. to get a notification if there's a new file in the directory. AWS Lambda script then will recieve the notification and refresh the application script in the AWS Glue.")
+st.write("I hope this assignment demonstrates that I meet the qualifications for the Data Engineer role at OneByZero. Currently, I am in a junior position and have much to learn. I hope this assignment showcases my eagerness to grow and adapt to new tools and environments, especially in data engineering. I look forward to hearing from you and hope to become a part of your team. Thank you!")

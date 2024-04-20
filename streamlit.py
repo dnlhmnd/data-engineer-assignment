@@ -50,3 +50,6 @@ def get_transaction(transaction_id):
             })
     return jsonify({'error': 'Transaction not found'}), 404'''
     st.code(code, language='python')
+
+image_url = 'images/SS1.png'
+st.image(image_url, caption='Image from GitHub', use_column_width=True)

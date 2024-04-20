@@ -34,9 +34,9 @@ st.dataframe(product_df)
 st.write('7.	Reference data is static and transaction data keeps coming in real-time in their respective folders.')
 st.write("")
 st.write('**Implementation Language: Python**')
-st.write('2.	Following REST APIs should be implemented.')
-st.write("a.	GET request http://localhost:8080/assignment/transaction/{transaction_id} \n\n i.	Type: GET \n\n ii.	Output data JSON: { “transactionId”: 1, “productName”: “P1”, “transactionAmount”: 1000.0, “transactionDatetime”: “2018-01-01 10:10:10”}")
-with st.expander("See Code"):
+st.write('Following REST APIs should be implemented.')
+st.write("**a.	GET request http://localhost:8080/assignment/transaction/{transaction_id}** \n\n i.	Type: GET \n\n ii.	Output data JSON: { “transactionId”: 1, “productName”: “P1”, “transactionAmount”: 1000.0, “transactionDatetime”: “2018-01-01 10:10:10”}")
+with st.expander("See code snippet"):
     code = '''@app.route('/assignment/transaction/<int:transaction_id>', methods=['GET'])
 def get_transaction(transaction_id):
     for transaction in transaction_data:
@@ -52,4 +52,78 @@ def get_transaction(transaction_id):
     st.code(code, language='python')
 
 image_url = 'images/SS1.png'
-st.image(image_url, caption='Image from GitHub', use_column_width=True)
+st.image(image_url, use_column_width=True)
+st.caption("I used the default port of Streamlit because I already have an existing connection for port 8080 in my local machine")
+
+st.write("")
+st.write("**b.	GET request http://localhost:8080/assignment/transactionSummaryByProducts/{last_n_days}**\n\ni.	Type: GET\n\nii.	Output data JSON: { “summary”:  [ {“productName”: “P1”, {“totalAmount”: 3000.0}]}")
+with st.expander("See code snippet"):
+    code = '''@app.route('/assignment/transactionSummaryByProducts/<int:last_n_days>', methods=['GET'])
+def get_transaction_summary_by_products(last_n_days):
+
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=last_n_days)
+    summary = {}
+
+    for transaction in transaction_data:
+        transaction_date = datetime.strptime(transaction['transactionDatetime'], '%Y-%m-%d %H:%M:%S')
+        if start_date <= transaction_date <= end_date:
+            product_id = transaction['productId']
+            product_name = reference_data.get(product_id, {}).get('productName', 'Unknown Product')
+            transaction_amount = float(transaction['transactionAmount'])
+            summary[product_name] = summary.get(product_name, 0) + transaction_amount
+
+    formatted_summary = [{'productName': product_name, 'totalAmount': total_amount} for product_name, total_amount in summary.items()]
+
+    return jsonify({'summary': formatted_summary})'''
+    st.code(code, language='python')
+
+image_url = 'images/SS2.png'
+st.image(image_url, use_column_width=True)
+st.caption("I had to use high value on {last_n_days} because the latest date on Transaction_20180101101010.csv is 2018 only, according to the assignment 'summary of transactions during the last 10 days from current date' which is 2024")
+
+st.write("")
+st.write("**c.	GET request http://localhost:8080/assignment/transactionSummaryByManufacturingCity/{last_n_days}**\n\ni.	Type: GET\n\nii.	Output data JSON: { “summary”:  [ {“cityName”: “C1”, {“totalAmount”: 3000.0}]}")
+with st.expander("See code snippet"):
+    code = '''@app.route('/assignment/transactionSummaryByManufacturingCity/<int:last_n_days>', methods=['GET'])
+def get_transaction_summary_by_manufacturing_city(last_n_days):
+
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=last_n_days)
+    summary = {}
+
+    for transaction in transaction_data:
+        transaction_date = datetime.strptime(transaction['transactionDatetime'], '%Y-%m-%d %H:%M:%S')
+        if start_date <= transaction_date <= end_date:
+            product_id = transaction['productId']
+            product_info = reference_data.get(product_id, {})
+            manufacturing_city = product_info.get('productManufacturingCity', 'Unknown City')
+            transaction_amount = float(transaction['transactionAmount'])
+            summary[manufacturing_city] = summary.get(manufacturing_city, 0) + transaction_amount
+
+    formatted_summary = [{'cityName': city_name, 'totalAmount': total_amount} for city_name, total_amount in summary.items()]
+
+    return jsonify({'summary': formatted_summary})'''
+    st.code(code, language='python')
+
+image_url = 'images/SS3.png'
+st.image(image_url, use_column_width=True)
+st.caption("I had to use high value on {last_n_days} for the same reason as task (b)")
+
+st.write("")
+st.write("To check if the application updates the transaction information when new files are uploaded in the folder I utilized Python's threading to continously check the 'Transaction' folder every 3 seconds when the application starts")
+dummy_data = {
+    "transactionId": [7, 8, 9, 10],
+    "productId": [30, 40, 50, 60],
+    "transactionAmount": [3000.0, 4000.0, 5000.0, 6000.0],
+    "transactionDatetime": [
+        "2018-10-01 10:25:10", "2018-10-01 10:30:10", "2018-10-01 10:35:10",
+        "2018-10-01 10:40:10"
+    ]
+}
+
+df = pd.DataFrame(dummy_data)
+st.write("Dummy data (data-engineer-assignment/Transaction_test.csv) ")
+st.write(df)
+
+st.write("As you can see, the transaction information got updated after I copied the dummy data to the 'Transaction' folder")

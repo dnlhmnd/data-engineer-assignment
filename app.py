@@ -5,6 +5,8 @@ import csv
 from flask import Flask, jsonify
 from datetime import datetime, timedelta
 from celery_config import make_celery
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 
 app = Flask(__name__)
 celery = make_celery(app)
@@ -14,6 +16,14 @@ reference_data_folder = 'Reference Data'
 
 reference_data = {}
 transaction_data = []
+
+class TransactionFileEventHandler(FileSystemEventHandler):
+    def on_created(self, event):
+        if event.is_directory:
+            return
+        if event.src_path.endswith('.csv'):
+            # Reload transaction data when a new file is added
+            load_transaction_data(transaction_folder)
 
 def load_reference_data(reference_data_file):
     reference_data = {}
@@ -98,6 +108,11 @@ def initialize():
 
     load_transaction_data.delay(transaction_folder)
     load_transaction_data(transaction_folder)
+
+    event_handler = TransactionFileEventHandler()
+    observer = Observer()
+    observer.schedule(event_handler, path=transaction_folder, recursive=False)
+    observer.start()
 
 reference_data_file = os.path.join(reference_data_folder, 'ProductReference.csv')
 reference_data = load_reference_data(reference_data_file)

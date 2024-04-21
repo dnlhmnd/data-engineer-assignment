@@ -4,4 +4,4 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [packages]
-flask = "*"
+flask = "2.2"

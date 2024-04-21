@@ -35,7 +35,7 @@ st.write('7.	Reference data is static and transaction data keeps coming in real-
 st.write("")
 st.write('**Implementation Language: Python**')
 st.write('Following REST APIs should be implemented.')
-st.write("**a.	GET request http://localhost:8080/assignment/transaction/{transaction_id}** \n\n i.	Type: GET \n\n ii.	Output data JSON: { “transactionId”: 1, “productName”: “P1”, “transactionAmount”: 1000.0, “transactionDatetime”: “2018-01-01 10:10:10”}")
+st.write("***a.	GET request http://localhost:8080/assignment/transaction/{transaction_id}*** \n\n i.	Type: GET \n\n ii.	Output data JSON: { “transactionId”: 1, “productName”: “P1”, “transactionAmount”: 1000.0, “transactionDatetime”: “2018-01-01 10:10:10”}")
 with st.expander("See code snippet"):
     code = '''@app.route('/assignment/transaction/<int:transaction_id>', methods=['GET'])
 def get_transaction(transaction_id):
@@ -56,7 +56,7 @@ st.image(image_url, use_column_width=True)
 st.caption("I used the default port of Streamlit because I already have an existing connection for port 8080 in my local machine")
 
 st.write("")
-st.write("**b.	GET request http://localhost:8080/assignment/transactionSummaryByProducts/{last_n_days}**\n\ni.	Type: GET\n\nii.	Output data JSON: { “summary”:  [ {“productName”: “P1”, {“totalAmount”: 3000.0}]}")
+st.write("***b.	GET request http://localhost:8080/assignment/transactionSummaryByProducts/{last_n_days}***\n\ni.	Type: GET\n\nii.	Output data JSON: { “summary”:  [ {“productName”: “P1”, {“totalAmount”: 3000.0}]}")
 with st.expander("See code snippet"):
     code = '''@app.route('/assignment/transactionSummaryByProducts/<int:last_n_days>', methods=['GET'])
 def get_transaction_summary_by_products(last_n_days):
@@ -83,7 +83,7 @@ st.image(image_url, use_column_width=True)
 st.caption("I had to use high value on {last_n_days} because the latest date on Transaction_20180101101010.csv is 2018 only, according to the assignment 'summary of transactions during the last 10 days from current date' which is 2024")
 
 st.write("")
-st.write("**c.	GET request http://localhost:8080/assignment/transactionSummaryByManufacturingCity/{last_n_days}**\n\ni.	Type: GET\n\nii.	Output data JSON: { “summary”:  [ {“cityName”: “C1”, {“totalAmount”: 3000.0}]}")
+st.write("***c.	GET request http://localhost:8080/assignment/transactionSummaryByManufacturingCity/{last_n_days}***\n\ni.	Type: GET\n\nii.	Output data JSON: { “summary”:  [ {“cityName”: “C1”, {“totalAmount”: 3000.0}]}")
 with st.expander("See code snippet"):
     code = '''@app.route('/assignment/transactionSummaryByManufacturingCity/<int:last_n_days>', methods=['GET'])
 def get_transaction_summary_by_manufacturing_city(last_n_days):
@@ -204,9 +204,84 @@ def initialize():
     observer.start()'''
     st.code(code, language='python')
 
+image_url = 'images/Recording2.gif'
+st.image(image_url, use_column_width=True)
+
 
 
 
 st.write("")
-st.write("In my current role as a Junior Data Scientist we usually use AWS SNS that's connected to a specific folder, google drive folder, AWS S3 bucket, etc. to get a notification if there's a new file in the directory. AWS Lambda script then will recieve the notification and refresh the application script in the AWS Glue.")
-st.write("I hope this assignment demonstrates that I meet the qualifications for the Data Engineer role at OneByZero. Currently, I am in a junior position and have much to learn. I hope this assignment showcases my eagerness to grow and adapt to new tools and environments, especially in data engineering. I look forward to hearing from you and hope to become a part of your team. Thank you!")
+st.write("In my current role as a Junior Data Scientist we usually use AWS SNS that's connected to a specific folder, google drive folder, or AWS S3 bucket, etc. to get a notification if there's a new file in the directory. An AWS Lambda script then will recieve the notification and refresh the script in the AWS Glue.")
+
+st.write("")
+st.write("**Design**")
+st.write("*a.	How do you consider the implementation if 5-10s of concurrent requests come at once.?*\n\n*b.	Each API request should not be a repeatable task.*\n\n*c.	How does an API request module should not be blocked by the data processing module, when there are 100s or 1000s of transaction files?*\n\n*d.	Scalability should be in the design.*")
+st.write("All of these requirements can be simply solved by using Celery for handling traffic, asynchronous Task Processing, and scalability.")
+st.write("Celery can help manage the load by processing the tasks in the background, handle asynchronous tasks, and it allows you to offload tasks that might be time-consuming or need to be executed at a specific time from the main application, helping improve the application's performance and scalability.")
+
+with st.expander("celery_config.py"):
+    code = '''from celery import Celery
+
+def make_celery(app):
+    
+    celery = Celery(app.import_name, backend='redis://localhost:6379/0', broker='redis://localhost:6379/0')
+    celery.conf.update(app.config)
+    TaskBase = celery.Task
+
+    class ContextTask(TaskBase):
+        abstract = True
+        def __call__(self, *args, **kwargs):
+            with app.app_context():
+                return TaskBase.__call__(self, *args, **kwargs)
+
+    celery.Task = ContextTask
+    return celery
+'''
+    st.code(code, language='python')
+
+with st.expander("app.py"):
+    code = '''from celery_config import make_celery
+
+app = Flask(__name__)
+celery = make_celery(app)
+    
+@celery.task
+def load_transaction_data(transaction_folder):
+    processed_files = set()
+    
+    files = os.listdir(transaction_folder)
+    
+    # Check for new files
+    new_files = [file for file in files if file not in processed_files]
+    
+    # Process new files
+    for filename in new_files:
+        if filename.endswith('.csv'):
+            file_path = os.path.join(transaction_folder, filename)
+            with open(file_path, 'r') as file:
+                reader = csv.DictReader(file)
+                for row in reader:
+                    transaction_data.append({
+                        'transactionId': row['transactionId'],
+                        'productId': row['productId'],
+                        'transactionAmount': row['transactionAmount'],
+                        'transactionDatetime': row['transactionDatetime']
+                    })
+            processed_files.add(filename)
+
+@app.before_first_request
+def initialize():
+
+    load_transaction_data.delay(transaction_folder)
+    load_transaction_data(transaction_folder)
+
+    event_handler = TransactionFileEventHandler()
+    observer = Observer()
+    observer.schedule(event_handler, path=transaction_folder, recursive=False)
+    observer.start()
+'''
+    st.code(code, language='python')
+
+
+
+st.write("***I hope this assignment demonstrates that I meet the qualifications for the Data Engineer role at OneByZero. Currently, I am in a junior position and have much to learn. I hope this assignment showcases my eagerness to grow and adapt to new tools and environments. I look forward to hearing from you and hope to become a part of your team. Thank you!***")

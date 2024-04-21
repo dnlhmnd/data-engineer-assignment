@@ -111,6 +111,7 @@ st.image(image_url, use_column_width=True)
 st.caption("I had to use high value on {last_n_days} for the same reason as task (b)")
 
 st.write("")
+st.write("**Data retrieval in Transaction folder**")
 st.write("To check if the application updates the transaction information when new files are uploaded in the folder I utilized Python's threading to continously check the 'Transaction' folder every 3 seconds when the application starts")
 dummy_data = {
     "transactionId": [7, 8, 9, 10],
@@ -125,11 +126,6 @@ dummy_data = {
 df = pd.DataFrame(dummy_data)
 st.write("Dummy data (data-engineer-assignment/Transaction_test.csv) ")
 st.write(df)
-
-st.write("As you can see, the transaction information was updated after I copied the dummy data to the 'Transaction' folder. I was able to get transactionId (7) after the transaction information got updated which wasn't in the memory when the application started.")
-
-image_url = 'images/Recording1.gif'
-st.image(image_url, use_column_width=True)
 
 with st.expander("See code snippet"):
     code = '''def load_transaction_data(transaction_folder):
@@ -169,6 +165,47 @@ transaction_loader_thread = threading.Thread(target=load_transaction_data, args=
 transaction_loader_thread.daemon = True
 transaction_loader_thread.start()'''
     st.code(code, language='python')
+
+image_url = 'images/Recording1.gif'
+st.image(image_url, use_column_width=True)
+st.write("As you can see, the transaction information was updated after I copied the dummy data to the 'Transaction' folder. I was able to get transactionId (7) after the transaction information got updated which wasn't in the memory when the application started.")
+st.write("")
+st.write("**Using watchdog library for real-time data retrieval (preferred)**")
+st.write("**watchdog** is designed to monitor file system events. It watches a directory for changes such as file creation, modification, or deletion and triggers specified actions when these events occur.")
+
+with st.expander("See code snippet"):
+    code = '''from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
+class TransactionFileEventHandler(FileSystemEventHandler):
+    def on_created(self, event):
+        if event.is_directory:
+            return
+        if event.src_path.endswith('.csv'):
+            # Reload transaction data when a new file is added
+            load_transaction_data(transaction_folder)
+
+def load_reference_data(reference_data_file):
+    ...
+
+@celery.task
+def load_transaction_data(transaction_folder):
+    ...
+
+@app.before_first_request
+def initialize():
+
+    load_transaction_data.delay(transaction_folder)
+    load_transaction_data(transaction_folder)
+
+    event_handler = TransactionFileEventHandler()
+    observer = Observer()
+    observer.schedule(event_handler, path=transaction_folder, recursive=False)
+    observer.start()'''
+    st.code(code, language='python')
+
+
+
 
 st.write("")
 st.write("In my current role as a Junior Data Scientist we usually use AWS SNS that's connected to a specific folder, google drive folder, AWS S3 bucket, etc. to get a notification if there's a new file in the directory. AWS Lambda script then will recieve the notification and refresh the application script in the AWS Glue.")

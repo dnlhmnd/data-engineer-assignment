@@ -9,8 +9,8 @@ from celery_config import make_celery
 app = Flask(__name__)
 celery = make_celery(app)
 
-transaction_folder = 'assignment/Transactions'
-reference_data_folder = 'assignment/Reference Data'
+transaction_folder = 'Transactions'
+reference_data_folder = 'Reference Data'
 
 reference_data = {}
 transaction_data = []
@@ -95,8 +95,9 @@ def load_transaction_data(transaction_folder):
 
 @app.before_first_request
 def initialize():
-    # Trigger the Celery task to load transaction data asynchronously
+
     load_transaction_data.delay(transaction_folder)
+    load_transaction_data(transaction_folder)
 
 reference_data_file = os.path.join(reference_data_folder, 'ProductReference.csv')
 reference_data = load_reference_data(reference_data_file)

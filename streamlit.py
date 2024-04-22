@@ -3,6 +3,7 @@ import pandas as pd
 
 st.title('Data Engineer Role Application Assignment at OneByZero')
 st.write('This is a breakdown and demo of the application I created for the Data Engineer - Coding Assignment.')
+st.write("https://github.com/dnlhmnd/data-engineer-assignment")
 st.write("")
 st.write("**Assignment Objective:** As part of your evaluation, we will need you to complete a coding assignment that will help us understand your fit with the opening at OnebyZero.")
 st.write("")
@@ -171,7 +172,7 @@ st.image(image_url, use_column_width=True)
 st.write("As you can see, the transaction information was updated after I copied the dummy data to the 'Transaction' folder. I was able to get transactionId (7) after the transaction information got updated which wasn't in the memory when the application started.")
 st.write("")
 st.write("**Using watchdog library for real-time data retrieval (preferred)**")
-st.write("**watchdog** is designed to monitor file system events. It watches a directory for changes such as file creation, modification, or deletion and triggers specified actions when these events occur.")
+st.write("*watchdog* is designed to monitor file system events. It watches a directory for changes such as file creation, modification, or deletion and triggers specified actions when these events occur.")
 
 with st.expander("See code snippet"):
     code = '''from watchdog.observers import Observer
@@ -216,7 +217,7 @@ st.write("In my current role as a Junior Data Scientist we usually use AWS SNS t
 st.write("")
 st.write("**Design**")
 st.write("*a.	How do you consider the implementation if 5-10s of concurrent requests come at once.?*\n\n*b.	Each API request should not be a repeatable task.*\n\n*c.	How does an API request module should not be blocked by the data processing module, when there are 100s or 1000s of transaction files?*\n\n*d.	Scalability should be in the design.*")
-st.write("All of these requirements can be simply solved by using Celery for handling traffic, asynchronous Task Processing, and scalability.")
+st.write("All of these requirements can be simply solved by using Celery for handling traffic, asynchronous task processing, and scalability.")
 st.write("Celery can help manage the load by processing the tasks in the background, handle asynchronous tasks, and it allows you to offload tasks that might be time-consuming or need to be executed at a specific time from the main application, helping improve the application's performance and scalability.")
 
 with st.expander("celery_config.py"):
